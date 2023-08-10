@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>考试表</title>
+  <link rel="stylesheet" href="layui/css/layui.css">
+  <script src = "layui/jquery.min.js"></script>
+</head>
+
+<body>
+
+<div class="layui-container">
+  <div class="layui-progress" style="margin: 15px 30px 0px;">
+    <div class="layui-progress-bar" lay-percent="100%"></div>
+  </div>
+  
+  <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px; margin-left: 30px; margin-right: -40px">
+    <legend>考试表</legend>
+  </fieldset>
+
+  <div class="layui-btn-container">
+    <button class="layui-btn" test-active="test-form-insert" style="margin-left: 30px;">增添考试</button>
+  </div>
+</div>
+
+<div class="layui-form" style="margin-left: 215px; margin-right: 145px">
+  <table class="layui-table" lay-even lay-skin="row" id="testInfoTable">
+  </table>
+</div>
+
+<div class="layui-col-md3" style="width: 200px">
+  <div class="layui-panel site-menu">
+    <ul class = "layui-menu layui-menu-lg">
+      <li class = "layui-menu-item-group" lay-options="{type: 'group', isAllowSpread: true}">
+        <div class="layui-menu-body-title">信息管理</div>
+        <hr>
+        <ul>
+          <li class>
+            <div class="layui-menu-body-title">
+              <a href = "../layui-v2.6.8/studentInfoManagement.html">
+                <span>学生信息管理</span>
+              </a>
+            </div>
+          </li>
+          <li class>
+            <div class="layui-menu-body-title">
+              <a href = "../layui-v2.6.8/testInfoManagement.html">
+                <span>考试表</span>
+              </a>
+            </div>
+          </li>
+          <li class>
+            <div class="layui-menu-body-title">
+              <a href = "../layui-v2.6.8/gradeManagement.html">
+                <span>学生成绩管理</span>
+              </a>
+            </div>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+</div>
+
+
+
+<!-- 引入 layui.js 的 <script> 标签最好放置在 html 末尾 -->
+<script src="layui/layui.js"></script>
+
+<script type="text/html" id="barDemo">
+  <a class="layui-btn layui-btn-xs edit-button" test-active="test-form-insert-score">添加学生成绩</a>
+  <a class="layui-btn layui-btn-danger layui-btn-xs" test-active="delete">删除</a>
+</script>
+
+<style>
+  .layui-form-item-test .layui-form-label-test {
+    width: 80px;
+  }
+
+  .layui-form-item-test .layui-input-block-test {
+    margin-left: 110px;
+    max-width: 200px; 
+    margin-top: 10px;
+  }
+
+  .layui-form-item-test .layui-input-test {
+    width: 100%;
+  }
+</style>
+
+
+<script>
+  loadPage();
+  let changeType = '';
+
+  layui.use(function(){
+    var layer = layui.layer,
+        form = layui.form,
+        laypage = layui.laypage,
+        element = layui.element,
+        laydate = layui.laydate,
+        util = layui.util;
+
+    // Event handling
+    util.event('test-active', {
+      'test-form-insert': function(){
+        changeType = "insert";
+        let title = '增添考场信息';
+        openPopupWindow(form, "", "", "");
+      },
+      'test-form-insert-score': function(){
+        changeType = "insert score";
+        
+        let semester = $(this).parents('tr').find("[data-field='semester']").text();
+        let course= $(this).parents('tr').find("[data-field='course']").text();
+        let testDate = $(this).parents('tr').find("[data-field='testDate']").text();
+        openPopupWindow(form, semester, course, testDate);
+      },
+      'delete': function(){
+        let semester = $(this).parents('tr').find("[data-field='semester']").text();
+        let course= $(this).parents('tr').find("[data-field='course']").text();
+        let token = localStorage.getItem('token');
+
+        let test = {
+          semester: semester,
+          course: course
+        };
+
+        $.ajax({
+          async: true,
+          url: 'http://127.0.0.1:8888/deleteTest',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify(test),
+          // dataType: 'json',
+          timeout: 3000,
+          headers: {
+            "Token": token
+          },
+          success: function(res) {
+            // studentList = res;
+            console.log(res);
+            if (Number(res) > 0) {
+              alert("删除成功");
+              loadPage();
+            } else {
+              alert("删除失败");
+            }	
+          },
+          error: function(err) {
+            console.log("请求失败，错误信息：");
+            console.log(err);
+          },
+        });
+        loadPage();
+      }
+    });
+  });
+
+  function openPopupWindow(form, semester, course, testDate) {
+    let token = localStorage.getItem('token');
+
+    if (changeType == "insert") {
+      $.ajax({
+        url: 'http://127.0.0.1:8888/getNameList',
+        method: 'GET',
+        dataType: 'json',
+        headers: {
+          "Token": token
+        },
+        success: function (res) {
+          console.log(res);
+          displayInsertContent(form, res, semester, testDate);
+        },
+        error: function (xhr, status, error) {
+          console.error('Error fetching student names:', error);
+          return [];
+        },
+      });
+    }
+    else if (changeType == "insert score") {
+      data = {
+        semester: semester,
+        course: course,
+      };
+      $.ajax({
+        url: 'http://127.0.0.1:8888/getScoreList',
+        method: 'GET',
+        dataType: 'json',
+        data: data,
+        headers: {
+          "Token": token
+        },
+        success: function (res) {
+          console.log(res);
+          displayScoreContent(res, semester, course, testDate);
+        },
+        error: function (xhr, status, error) {
+          console.error('Error fetching student names:', error);
+          return [];
+        },
+      });
+    }
+  }
+
+  function displayInsertContent(form, res, semester, testDate) {
+
+    let contentHtml = ['<ul class="layui-form layui-form-pane" style="margin: 15px;">',
+                  '<li class="layui-form-item">',
+                  '<strong style="font-size: 16px;">考场信息</strong>',
+                  '</li>',
+                  '<li class="layui-form-item">',
+                  '<label class="layui-form-label">*学期</label>',
+                  '<div class="layui-input-block">',
+                  '<input type = "text" class="layui-input" required lay-verify="required" lay-verify-msg="学期不能为空" class = "layui-input" name="field1" id="semester" value="' + semester + '" required>',
+                  '</div>',
+                  '</li>',
+                  '<li class="layui-form-item">',
+                  '<label class="layui-form-label">*考试日期</label>',
+                  '<div class="layui-input-block">',
+                  '<input class="layui-input" lay-verify="required" lay-verify-msg="考试日期不能为空" name="field1" type="date" id="testDate" value="' + testDate + '" required>',
+                  '<li class="layui-form-item">',
+                  '<strong style="font-size: 16px;">学科</strong>',
+                  '</li>',
+                  '<li class="layui-form-item">', // Group the radio buttons in one row
+                  '<div class="layui-input-block" style="width: 90%; margin: 0 auto;">', // Set width and center the content
+                  '<input type="radio" name="course" value="语文" title="语文" checked="" style="margin-right: 10px;">',
+                  '<input type="radio" name="course" value="数学" title="数学" style="margin-right: 10px;">',
+                  '<input type="radio" name="course" value="英语" title="英语" style="margin-right: 10px;">',
+                  '<input type="radio" name="course" value="物理" title="物理" style="margin-right: 10px;">',
+                  '<input type="radio" name="course" value="生物" title="生物">',
+                  '</div>',
+                  '</li>',
+                  '</li>'];
+      
+      layer.open({
+        type: 1,
+        resize: false,
+        shadeClose: true,
+        area: '400px',
+        title: '增添考场信息',
+        content: contentHtml.join(''),
+        btn: ['添加', '关闭'],
+        success: function (layero) {
+          layero.find('.layui-layer-content').css('overflow', 'visible');
+          layero.find('.layui-input-block-test').css('margin-left', '110px');
+          layero.find('.layui-input-block-test').css('max-width', '200px');
+          layero.find('.layui-input').css('width', '100%');
+          form.render('radio');
+        },
+        yes: function () {
+          let students = res.data;
+          let semester = document.getElementById("semester").value;
+          let testDate = document.getElementById("testDate").value;
+          let course = $('input[name="course"]:checked').val();
+
+          let token = localStorage.getItem('token');
+
+
+          for (const student of students) {
+            console.log(student.name);
+            data = {
+              name: student.name,
+              studentId: student.studentId,
+              semester: semester,
+              course: course,
+              testDate: testDate,
+            };
+              
+              $.ajax({
+                url: 'http://127.0.0.1:8888/insertGrade',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                headers: {
+                  "Token": token
+                },
+                success: function (response) {
+                  console.log('Data saved:', response);
+                  loadPage();
+                },
+                error: function (xhr, status, error) {
+                  console.error('Error saving data:', error);
+                }
+              });
+            
+          }
+          layer.closeAll();
+        }
+      });
+  }
+
+  function displayScoreContent(res, semester, course, testDate) {
+    const scores = res.data;
+
+    var contentHtml = [];
+    contentHtml.push('<ul>');
+
+    for (const score of scores) {
+      if (score.name && score.studentId !== undefined && score.score !== undefined) {
+        var html = '<li class="layui-form-item-test">' +
+          '<label class="layui-form-label">' + score.name + '</label>' +
+          '<div class="layui-input-block-test">' +
+          '<input type="text" class="layui-input" name="' + score.id + '" value="' + score.score + '">' +
+          '</div>' +
+          '<input type="hidden" name="studentId" value="' + score.studentId + '">' +
+          '</li>';
+        
+        contentHtml.push(html);
+      } else {
+        console.warn("Invalid 'score' object:", score);
+      }
+    }
+    contentHtml.push('</ul>');
+
+      layer.open({
+        type: 1,
+        resize: false,
+        shadeClose: true,
+        area: '400px',
+        title: '学生成绩',
+        content: contentHtml.join(''),
+        btn: ['添加', '关闭'],
+        success: function (layero) {
+          layero.find('.layui-layer-content').css('overflow', 'visible');
+          layero.find('.layui-input-block-test').css('margin-left', '110px');
+          layero.find('.layui-input-block-test').css('max-width', '200px');
+          layero.find('.layui-input').css('width', '100%');
+
+          if (changeType === 'insert score') {
+            $('.layui-form-item-test').each(function (index) {
+              const score = scores[index];
+              $(this).find('.layui-input').val(score.score);
+            });
+          }
+        },
+        yes: function () {
+          let token = localStorage.getItem('token');
+          let name = "";
+          let studentId = 0;
+          let score = 0;
+
+          const students = [];
+          $('.layui-form-item-test').each(function () {
+            name = $(this).find('.layui-form-label').text();
+            studentId = $(this).find('[name="studentId"]').val();
+            score = $(this).find('.layui-input').val();
+            
+            if (name.trim() !== '' && studentId.trim() !== '' && score.trim() !== '') {
+              students.push({
+                name: name,
+                studentId: studentId,
+                score: parseFloat(score)
+              });
+            }
+          });
+          
+          for (const student of students) {
+            if (changeType == "insert score") {
+              data = {
+                name: student.name,
+                studentId: student.studentId,
+                score: student.score,
+                semester: semester,
+                course: course
+              };
+              console.log(student.studentId + " " + score);
+              
+              $.ajax({
+                url: 'http://127.0.0.1:8888/editGrade',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                headers: {
+                  "Token": token
+                },
+                success: function (response) {
+                  console.log('Data saved:', response);
+                  loadPage();
+                },
+                error: function (xhr, status, error) {
+                  console.error('Error saving data:', error);
+                }
+              });
+            }
+          }
+          layer.closeAll();
+        }
+      });
+  }
+
+  function loadPage() {
+    let token = localStorage.getItem('token');
+
+    layui.use('table', function(){
+      var table = layui.table;
+
+      table.render({
+        elem: '#testInfoTable',
+        url: 'http://127.0.0.1:8888/getTestList',
+        method: 'GET',
+        cellMinWidth: 20,
+        headers: {
+          "Token": token
+        },
+        cols: [
+          [
+            { field: 'semester', width: 300, title: '学期' },
+            { field: 'course', width: 300, title: '学科' },
+            { field: 'testDate', width: 280, title: '考试日期'},
+            { fixed: 'right', title:'操作', toolbar: '#barDemo'}
+          ],
+        ]
+      });
+    });
+  }
+</script>
+</body>
+</html>

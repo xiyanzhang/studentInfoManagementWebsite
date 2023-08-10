@@ -1,0 +1,341 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>学生成绩管理</title>
+  <link rel="stylesheet" href="layui/css/layui.css">
+  <script src = "layui/jquery.min.js"></script>
+</head>
+<body>
+
+<div class="layui-container">
+  <div class="layui-progress" style="margin: 15px 30px 0px;">
+    <div class="layui-progress-bar" lay-percent="100%"></div>
+  </div>
+  
+  <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px; margin-left: 30px; margin-right: -40px">
+    <legend>学生成绩管理</legend>
+  </fieldset>
+</div>
+
+<div class="layui-form" style="margin-left: 215px; margin-right: 145px">
+  <table class="layui-table" lay-even lay-skin="row" id="gradeInfoTable">
+  </table>
+</div>
+
+<div class="layui-col-md3" style="width: 200px">
+  <div class="layui-panel site-menu">
+    <ul class = "layui-menu layui-menu-lg">
+      <li class = "layui-menu-item-group" lay-options="{type: 'group', isAllowSpread: true}">
+        <div class="layui-menu-body-title">信息管理</div>
+        <hr>
+        <ul>
+          <li class>
+            <div class="layui-menu-body-title">
+              <a href = "../layui-v2.6.8/studentInfoManagement.html">
+                <span>学生信息管理</span>
+              </a>
+            </div>
+          </li>
+          <li class>
+            <div class="layui-menu-body-title">
+              <a href = "../layui-v2.6.8/testInfoManagement.html">
+                <span>考试表</span>
+              </a>
+            </div>
+          </li>
+          <li class>
+            <div class="layui-menu-body-title">
+              <a href = "../layui-v2.6.8/gradeManagement.html">
+                <span>学生成绩管理</span>
+              </a>
+            </div>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+</div>
+
+
+
+<!-- 引入 layui.js 的 <script> 标签最好放置在 html 末尾 -->
+<script src="layui/layui.js"></script>
+
+<script type="text/html" id="barDemo">
+  <!-- <a class="layui-btn layui-btn-xs insert-button" test-active="test-form-insert">增添成绩</a> -->
+  <a class="layui-btn layui-btn-xs edit-button" test-active="test-form-update">编辑成绩</a>
+  <!--<a class="layui-btn layui-btn-danger layui-btn-xs" test-active="delete">删除</a>-->
+</script>
+
+
+
+<script>
+  loadPage();
+  let changeType = '';
+
+  layui.use(function(){
+    var layer = layui.layer,
+        form = layui.form,
+        laypage = layui.laypage,
+        element = layui.element,
+        laydate = layui.laydate,
+        util = layui.util;
+
+    // Helper function to generate the form content
+    function generateFormHtml(title, name, studentId, semester, course, score, gradeId) {
+      return ['<ul class="layui-form layui-form-pane" style="margin: 15px;">'
+        ,'<li class="layui-form-item">'
+          ,'<label class="layui-form-label">*姓名</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" id="name" value="' + name + '" readonly>'
+          ,'</div>'
+        ,'</li>'
+        ,'<li class="layui-form-item">'
+          ,'<label class="layui-form-label">*学号</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" id="studentId" value="' + studentId + '" readonly>'
+          ,'</div>'
+        ,'</li>'
+        , '<li class="layui-form-item">'
+          ,'<label class="layui-form-label">*学期</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" id="semester" value="' + semester + '" readonly>'
+          ,'</div>'
+        ,'</li>'
+        , '<li class="layui-form-item">'
+          ,'<label class="layui-form-label">*学科</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" id="course" value="' + course + '" readonly>'
+          ,'</div>'
+        ,'</li>'
+        , '<li class="layui-form-item">'
+          ,'<label class="layui-form-label">成绩</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" name="field1" id="score" value="' + score + '">'
+          ,'</div>'
+        , '</li>'
+        , '<li class="layui-form-item">'
+          ,'<input type="hidden" id="gradeId" value="' + gradeId + '">'
+        , '</li>'
+      ,'</ul>'].join('')
+    }
+
+    // Helper function to open the pop-up window
+    function openPopupWindow(title, contentHtml, changeType) {
+      layer.open({
+        type: 1,
+        resize: false,
+        shadeClose: true,
+        area: '400px',
+        title: title,
+        content: contentHtml,
+        btn: ['添加', '关闭'],
+        success: function (layero, index) {
+          layero.find('.layui-layer-content').css('overflow', 'visible');
+          form.render().on('submit(*)', function (data) {
+            layer.close(index); // Close the layer
+            location.reload(); // Refresh the page
+          });
+        },
+        yes: function () {
+          changeType = changeType || 'update'; // Use 'update' as the default value if changeType is not provided
+          editData(changeType);
+          layer.closeAll();
+        }
+      });
+    }
+
+    // Event handling
+    util.event('test-active', {
+      // 'test-form-insert': function(){
+      //   let studentId = $(this).parents('tr').find("[data-field='studentId']").text();
+      //   let name = $(this).parents('tr').find("[data-field='name']").text();
+
+      //   console.log("添加学号为" + studentId + "的学生的成绩数据");
+
+      //   let title = '增添学生';
+      //   let contentHtml = generateFormHtml(title, name, studentId, '', '', '', '', '', '');
+
+      //   openPopupWindow(title, contentHtml, 'insert');
+      // },
+      'test-form-update': function(){
+        let studentId = $(this).parents('tr').find("[data-field='studentId']").text();
+        let name = $(this).parents('tr').find("[data-field='name']").text();
+        let semester = $(this).parents('tr').find("[data-field='semester']").text();
+        let course= $(this).parents('tr').find("[data-field='course']").text();
+        let score = $(this).parents('tr').find("[data-field='score']").text();
+        let gradeId = $(this).parents('tr').find("[data-field='gradeId']").text();
+        console.log("修改成绩学号为" + gradeId + "的成绩数据");
+
+        let title = '修改学生';
+        let contentHtml = generateFormHtml(title, name, studentId, semester, course, score, gradeId);
+
+        openPopupWindow(title, contentHtml, 'update');
+      },
+      'delete': function(){
+        let gradeId = $(this).parents('tr').find("[data-field='gradeId']").text();
+        let token = localStorage.getItem('token');
+
+        let grade = {
+          gradeId: gradeId
+        };
+
+        $.ajax({
+          async: true,
+          url: 'http://127.0.0.1:8888/deleteGrade',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify(grade),
+          // dataType: 'json',
+          timeout: 3000,
+          headers: {
+            "Token": token
+          },
+          success: function(res) {
+            // studentList = res;
+            console.log(res);
+            if (Number(res) > 0) {
+              alert("删除成功");
+              loadPage();
+            } else {
+              alert("删除失败");
+            }	
+          },
+          error: function(err) {
+            console.log("请求失败，错误信息：");
+            console.log(err);
+          },
+        });
+      }
+    });
+});
+
+  function editData(changeType) {
+    let name = document.getElementById("name").value;
+    console.log("姓名: " + name);
+    
+    let studentId = document.getElementById("studentId").value;
+    console.log("学号: " + studentId);
+
+    let semester = document.getElementById("semester").value;
+    if (semester === "") {
+      semester = "未填";
+    }
+    console.log("学期: " + semester);
+
+    let course = document.getElementById("course").value;
+    if (course === "") {
+      course = "未填";
+    }
+    console.log("学科: " + course);
+
+    let score = document.getElementById("score").value;
+    if (score === "") {
+      score = "";
+    }
+    console.log("成绩: " + score);
+
+    let data = {
+      name: name,
+      studentId: studentId,
+      semester: semester,
+      course: course,
+      score: score,
+    }
+
+    let token = localStorage.getItem('token');
+
+    if (changeType == 'insert'){
+      grade = data;
+      $.ajax({
+        async: true,
+        url: 'http://127.0.0.1:8888/insertGrade',
+        type:'POST',
+        contentType:'application/json',
+        headers: {
+          "Token": token
+        },
+        data: JSON.stringify(grade),
+        timeout:3000,
+        success:function(res) {
+          console.log(res);
+          if (Number(res) > 0) {
+            alert("增添成功");
+            loadPage();
+          }else{
+            alert("增添失败");
+          }
+        },
+        error: function(err) {
+          alert("添加成绩失败");
+          console.log("请求失败，错误信息：");
+          console.log(err);
+        },
+      })
+    }
+    else if (changeType == 'update') {
+      let grade = data;
+      $.ajax({
+        async: true,
+        url: 'http://127.0.0.1:8888/editGrade',
+        type:'POST',
+        contentType:'application/json',
+        data: JSON.stringify(grade),
+        headers: {
+          "Token": token
+        },
+        // dataType: 'json',
+        timeout:3000,
+        success:function(res) {
+          console.log(res);
+          if (Number(res) > 0) {
+            alert("修改成功");
+            loadPage();
+          }else{
+            alert("修改失败");
+          }
+        },
+        error: function(err) {
+          //alert("学号为 " +  + "的学生不存在");
+          console.log("请求失败，错误信息：");
+          console.log(err);
+        },
+      })
+    }
+    
+  }
+  function loadPage() {
+
+    let token = localStorage.getItem('token');
+
+    layui.use('table', function(){
+      var table = layui.table;
+
+      table.render({
+        elem: '#gradeInfoTable',
+        url: 'http://127.0.0.1:8888/getGradeList',
+        method: 'GET',
+        cellMinWidth: 20,
+        headers: {
+          "Token": token
+        },
+        cols: [
+          [
+            { field: 'name', width: 140, title: '姓名' },
+            { field: 'studentId', width: 140, title: '学号' },
+            { field: 'semester', width: 220, title: '学期' },
+            { field: 'course', width: 220, title: '学科' },
+            { field: 'score', width: 160, title: '成绩' },
+            { field: 'gradeId', hide: true},
+            { fixed: 'right', title:'操作', toolbar: '#barDemo'}
+          ],
+        ]
+      });
+    });
+  }
+  </script>
+</body>
+</html>

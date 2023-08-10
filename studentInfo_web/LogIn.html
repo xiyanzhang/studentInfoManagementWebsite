@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>学生信息管理</title>
+		<script src = "jquery.min.js"></script>
+
+	</head>
+    <style>
+        #logInForm {
+			width: 300px;
+			max-width: 100%;
+			border: 1px solid black;
+			background-color: white;
+			padding: 7.5px;
+			/* 内边距 10px */
+			border-radius: 5px;
+			/* 边框圆角 */
+			position: fixed;
+			/* 绝对定位 */
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+		}
+
+		.logInLabel {
+			width: 100px;
+			padding: 5px 5px;
+			box-sizing: border-box; /* box-sizing 将padding、border等 也算到width里面 */
+			text-align: right;
+		}
+		
+		.logInInput {
+			width: 200px;
+			padding: 5px 5px; /* Adjust the padding values to include left padding */
+			box-sizing: border-box;
+		}
+
+		#newLogInForm {
+			display: flex;
+			flex-wrap: wrap; 
+			justify-content: flex-end;
+			flex: 1;
+		}
+
+        .hide {
+			display:none; /* 不显示 */
+		}
+    </style>
+
+    <body>
+        <h1>学生信息管理</h1>
+
+        <div id="logInForm" class="form hide">
+			<form id="newLogInForm" onsubmit="handleSignIn(event)">
+			  <div class="logInLabel">
+				用户名:
+			  </div>
+			  <div class="logInInput">
+				<input type="text" id="username" size="15" required>
+			  </div>
+		  
+			  <div class="logInLabel">
+				密码:
+			  </div>
+			  <div class="logInInput">
+				<input type="text" id="password" size="15" required>
+			  </div>
+		  
+			  <button type="submitLoginInfo">登录</button>
+			  <button type="button" id="closeLogin">关闭</button>
+			</form>
+		</div>
+
+        <script>
+            window.onload = function() {
+                document.getElementById('logIn').addEventListener('click', function() {
+                    document.getElementById('logInForm').classList.remove('hide');
+                });
+
+                document.getElementById('closeLogin').addEventListener('click', function() {
+                    let newLogInForm = document.getElementById('newLogInForm');
+                    newLogInForm.reset();
+                    document.getElementById('logInForm').classList.add('hide');
+                });
+            }
+
+            function handleSignIn(event) {
+				event.preventDefault();
+
+				let username = document.getElementById("username").value;
+				console.log("用户名：" + username);
+
+				let password = document.getElementById("password").value;
+				console.log("密码：" + password);
+
+				let userInfo = {
+					username : username,
+					password: password
+				}
+
+				checkUser(userInfo);
+				
+				let newLogInForm = document.getElementById('newLogInForm');
+				newLogInForm.reset();
+				document.getElementById('logInForm').classList.add('hide');
+			}
+
+            function checkUser(userInfo) {
+				$.ajax({
+						async: true,
+						url: 'http://127.0.0.1:8888/checkAccountExistence',
+						type:'POST',
+						contentType:'application/json',
+						data: JSON.stringify(userInfo),
+						timeout:3000,
+						success:function(res) {
+							console.log(JSON.stringify(res));
+							if (res != "") {
+								alert("用户登录成功");
+								// Store the JSON string in the local storage
+								localStorage.setItem("token", res);
+								window.location.href = "studentInfoManagement.html";
+							}else{
+								alert("用户登录失败");
+							}
+						},
+						error: function(err) {
+							console.log("请求失败，错误信息：");
+							console.log(err);
+						},
+					})
+			}
+        </script>
+
+        <button id="logIn">登录</button>
+            
+    </body>
+</html>

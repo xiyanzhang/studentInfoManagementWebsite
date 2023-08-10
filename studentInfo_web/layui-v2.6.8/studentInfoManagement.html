@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>学生信息管理</title>
+  <link rel="stylesheet" href="layui/css/layui.css">
+  <script src = "layui/jquery.min.js"></script>
+</head>
+<body>
+
+<div class="layui-container">
+  <div class="layui-progress" style="margin: 15px 30px 0px;">
+    <div class="layui-progress-bar" lay-percent="100%"></div>
+  </div>
+  
+  <fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px; margin-left: 30px; margin-right: -40px">
+    <legend>学生信息管理</legend>
+  </fieldset>
+  
+  <div class="layui-btn-container">
+    <button class="layui-btn" test-active="test-form-insert" style="margin-left: 30px;">增添学生</button>、
+    <button class="layui-btn" test-active="test-form-search">查看学生信息</button>
+  </div>
+</div>
+
+<div class="layui-form" style="margin-left: 215px; margin-right: 145px">
+  <table class="layui-table" lay-even lay-skin="row" id="studentInfoTable">
+  </table>
+</div>
+
+<div class="layui-col-md3" style="width: 200px">
+  <div class="layui-panel site-menu">
+    <ul class = "layui-menu layui-menu-lg">
+      <li class = "layui-menu-item-group" lay-options="{type: 'group', isAllowSpread: true}">
+        <div class="layui-menu-body-title">信息管理</div>
+        <hr>
+        <ul>
+          <li class>
+            <div class="layui-menu-body-title">
+              <a href = "../layui-v2.6.8/studentInfoManagement.html">
+                <span>学生信息管理</span>
+              </a>
+            </div>
+          </li>
+          <li class>
+            <div class="layui-menu-body-title">
+              <a href = "../layui-v2.6.8/testInfoManagement.html">
+                <span>考试表</span>
+              </a>
+            </div>
+          </li>
+          <li class>
+            <div class="layui-menu-body-title">
+              <a href = "../layui-v2.6.8/gradeManagement.html">
+                <span>学生成绩管理</span>
+              </a>
+            </div>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+</div>
+
+
+
+<!-- 引入 layui.js 的 <script> 标签最好放置在 html 末尾 -->
+<script src="layui/layui.js"></script>
+
+<script type="text/html" id="barDemo">
+  <a class="layui-btn layui-btn-xs edit-button" test-active="test-form-update">编辑</a>
+  <a class="layui-btn layui-btn-danger layui-btn-xs" test-active="delete">删除</a>
+</script>
+
+
+
+<script>
+  loadPage();
+  let changeType = '';
+  let maxId = localStorage.getItem('maxId');
+  let numStudents = localStorage.getItem('numStudents');
+  if (numStudents == 0) {
+    maxId = 1;
+  } else {
+    maxId = parseInt(maxId);
+  }
+  // maxId = 1;
+  // numStudents = 0;
+  // localStorage.setItem('maxId', maxId);
+  // localStorage.setItem('numStudents', numStudents);
+  console.log("maxId: " + maxId);
+  console.log("numStudents: " + numStudents);
+
+  layui.use(function(){
+    var layer = layui.layer,
+        form = layui.form,
+        laypage = layui.laypage,
+        element = layui.element,
+        laydate = layui.laydate,
+        util = layui.util;
+
+    // Helper function to generate the form content
+    function generateFormHtml(title, name, age, studentId, genderValue, birthdate, phoneNumber, politicalStatus, ethnicGroup) {
+      return ['<ul class="layui-form layui-form-pane" style="margin: 15px;">'
+        ,'<li class="layui-form-item">'
+          ,'<label class="layui-form-label">*姓名</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" id="name" value="' + name + '">'
+          ,'</div>'
+        ,'</li>'
+        ,'<li class="layui-form-item">'
+          ,'<label class="layui-form-label">*年龄</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" id="age" value="' + age + '">'
+          ,'</div>'
+        ,'</li>'
+        ,'<li class="layui-form-item">'
+          ,'<label class="layui-form-label">*学号</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" id="studentId" value="' + studentId + '" readonly>'
+          ,'</div>'
+        ,'</li>'
+        , '<li class="layui-form-item">'
+          , '<label class="layui-form-label" id="updateGender">*性别</label>'
+              , '<div class="layui-input-block" id="gender">'
+              , '<select name="interest" style="text-align: left" id="gender1">'
+                  , '<option value="">性别</option>'
+                  , '<option value="0"' + (genderValue === '0' ? ' selected' : '') + '>男</option>'
+                  , '<option value="1"' + (genderValue === '1' ? ' selected' : '') + '>女</option>'
+              , '</select>'
+          , '</div>'
+        , '</li>'
+        , '<li class="layui-form-item">'
+          ,'<label class="layui-form-label">*出生日期</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" type="date" id="birthdate" value="' + birthdate + '">'
+          ,'</div>'
+        ,'</li>'
+        , '<li class="layui-form-item">'
+          ,'<label class="layui-form-label">*手机号码</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" id="phoneNumber" value="' + phoneNumber + '">'
+          ,'</div>'
+        ,'</li>'
+        , '<li class="layui-form-item">'
+          ,'<label class="layui-form-label">政治面貌</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" name="field1" id="politicalStatus" value="' + politicalStatus + '">'
+          ,'</div>'
+        ,'</li>'
+        , '<li class="layui-form-item">'
+          ,'<label class="layui-form-label">名族</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" name="field1" id="ethnicGroup" value="' + ethnicGroup + '">'
+          ,'</div>'
+        ,'</li>'
+      ,'</ul>'].join('')
+    }
+
+    function generateSearchHtml() {
+      return ['<ul class="layui-form layui-form-pane" style="margin: 15px;">'
+        ,'<li class="layui-form-item">'
+          ,'<label class="layui-form-label">查看</label>'
+          ,'<div class="layui-input-block">'
+            ,'<input class="layui-input" lay-verify="required" name="field1" id="search" >'
+          ,'</div>'
+        ,'</li>'].join('')
+    }
+
+    // Helper function to open the pop-up window
+    function openPopupWindow(title, contentHtml, changeType) {
+      layer.open({
+        type: 1,
+        resize: false,
+        shadeClose: true,
+        area: '400px',
+        title: title,
+        content: contentHtml,
+        btn: ['添加', '关闭'],
+        success: function (layero, index) {
+          layero.find('.layui-layer-content').css('overflow', 'visible');
+          form.render().on('submit(*)', function (data) {
+            layer.close(index); // Close the layer
+            location.reload(); // Refresh the page
+          });
+        },
+        yes: function () {
+          changeType = changeType || 'update'; // Use 'update' as the default value if changeType is not provided
+          editData(changeType);
+          layer.closeAll();
+        }
+      });
+    }
+
+    function openSearchWindow(title, contentHtml, changeType) {
+      layer.open({
+        type: 1,
+        resize: false,
+        shadeClose: true,
+        area: '400px',
+        title: title,
+        content: contentHtml,
+        btn: ['搜索', '关闭'],
+        success: function (layero, index) {
+          layero.find('.layui-layer-content').css('overflow', 'visible');
+          form.render().on('submit(*)', function (data) {
+            layer.close(index); // Close the layer
+            location.reload(); // Refresh the page
+          });
+        },
+        yes: function () {
+          changeType = changeType || 'update'; // Use 'update' as the default value if changeType is not provided
+          editData(changeType);
+          layer.closeAll();
+        }
+      });
+    }
+
+    // Event handling
+    util.event('test-active', {
+      'test-form-insert': function(){
+        let currStudentId = maxId;
+        localStorage.setItem('maxId', maxId);
+
+        let title = '增添学生';
+        let contentHtml = generateFormHtml(title, '', '', currStudentId, '', '', '', '', '');
+
+        openPopupWindow(title, contentHtml, 'insert');
+      },
+      'test-form-search': function() {
+        let contentHtml = generateSearchHtml();
+        openSearchWindow("查看学生信息", contentHtml, 'search');
+      },
+      'test-form-update': function(){
+        let studentId = $(this).parents('tr').find("[data-field='studentId']").text();
+        let name = $(this).parents('tr').find("[data-field='name']").text();
+        let age = $(this).parents('tr').find("[data-field='age']").text();
+
+        let gender = $(this).parents('tr').find("[data-field='gender']").text();
+        let genderValue = gender === '男' ? '0' : '1';
+
+        let birthdate = $(this).parents('tr').find("[data-field='birthdate']").text();
+        let phoneNumber = $(this).parents('tr').find("[data-field='phoneNumber']").text();
+        let politicalStatus = $(this).parents('tr').find("[data-field='politicalStatus']").text();
+        let ethnicGroup = $(this).parents('tr').find("[data-field='ethnicGroup']").text();
+        console.log("修改学号为" + studentId + "的学生数据");
+        console.log(gender);
+
+        let title = '修改学生';
+        let contentHtml = generateFormHtml(title, name, age, studentId, genderValue, birthdate, phoneNumber, politicalStatus, ethnicGroup);
+
+        openPopupWindow(title, contentHtml, 'update');
+      },
+      'delete': function(){
+        let studentId = $(this).parents('tr').find("[data-field='studentId']").text();
+        let token = localStorage.getItem('token');
+        console.log("删除学号为" + studentId + "的学生");
+
+        let student = {
+          studentId: studentId
+        };
+
+        $.ajax({
+          async: true,
+          url: 'http://127.0.0.1:8888/deleteStudent',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify(student),
+          // dataType: 'json',
+          timeout: 3000,
+          headers: {
+            "Token": token
+          },
+          success: function(res) {
+            // studentList = res;
+            console.log(res);
+            if (Number(res) > 0) {
+              alert("删除成功");
+              numStudents--;
+              localStorage.setItem('numStudents', numStudents);
+              console.log("删除一个学生，现在有" + numStudents + "名学生");
+              loadPage();
+            } else {
+              alert("删除失败");
+            }	
+          },
+          error: function(err) {
+            console.log("请求失败，错误信息：");
+            console.log(err);
+          },
+        });
+        $.ajax({
+          async: true,
+          url: 'http://127.0.0.1:8888/deleteStudentGrades',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify(student),
+          timeout: 3000,
+          headers: {
+            "Token": token
+          },
+          success: function(res) {
+            // studentList = res;
+            console.log(res);
+            if (Number(res) > 0) {
+              alert("删除成功");
+              console.log("删除该学生所有成绩");
+              loadPage();
+            } else {
+              alert("删除失败");
+            }	
+          },
+          error: function(err) {
+            console.log("请求失败，错误信息：");
+            console.log(err);
+          },
+        });
+      }
+    });
+});
+
+  function submitSearch() {
+    let search = document.getElementById("search").value;
+    console.log("搜索：" + search);
+
+    let data = {
+      search: search
+    }
+
+    $.ajax({
+      async: true,
+        url: 'http://127.0.0.1:8888/insertStudent',
+        type:'POST',
+        contentType:'application/json',
+        headers: {
+          "Token": token
+        },
+        data: JSON.stringify(student),
+        timeout:3000,
+        success:function(res) {
+          console.log(res);
+          if (Number(res) > 0) {
+            alert("增添成功");
+            numStudents++;
+            localStorage.setItem('numStudents', numStudents);
+            localStorage.setItem('maxId', ++maxId);
+            loadPage();
+          }else{
+            alert("增添失败");
+          }
+        },
+        error: function(err) {
+          alert("添加学生失败");
+          console.log("请求失败，错误信息：");
+          console.log(err);
+        },
+    })
+  }
+
+  function editData(changeType) {
+    let name = document.getElementById("name").value;
+    console.log("姓名: " + name);
+
+    let age = document.getElementById("age").value;
+    console.log("年龄: " + age);
+    
+    let studentId = document.getElementById("studentId").value;
+    console.log("学号: " + studentId);
+
+    let genderSelect = document.querySelector('select[name="interest"]').value;
+    // Get the value (number) of the selected option
+    let gender = genderSelect == '0' ? '男': '女';
+    console.log("性别: " + gender);
+
+    let birthdate = document.getElementById("birthdate").value;
+    console.log("生日: " + birthdate);
+
+    let phoneNumber = document.getElementById("phoneNumber").value;
+    console.log("手机号码: " + phoneNumber);
+
+    let politicalStatus = document.getElementById("politicalStatus").value;
+    if (politicalStatus === "") {
+      politicalStatus = "未填";
+    }
+    console.log("政治面貌: " + politicalStatus);
+
+    let ethnicGroup = document.getElementById("ethnicGroup").value;
+    if (ethnicGroup === "") {
+      ethnicGroup = "未填";
+    }
+    console.log("名族: " + ethnicGroup);
+
+    let data = {
+      name: name,
+      age: age,
+      studentId: studentId,
+      gender: gender,
+      birthdate: birthdate,
+      phoneNumber: phoneNumber,
+      politicalStatus: politicalStatus,
+      ethnicGroup: ethnicGroup
+    }
+
+    let token = localStorage.getItem('token');
+
+    if (changeType == 'insert'){
+      let student = data;
+      $.ajax({
+        async: true,
+        url: 'http://127.0.0.1:8888/insertStudent',
+        type:'POST',
+        contentType:'application/json',
+        headers: {
+          "Token": token
+        },
+        data: JSON.stringify(student),
+        timeout:3000,
+        success:function(res) {
+          console.log(res);
+          if (Number(res) > 0) {
+            alert("增添成功");
+            numStudents++;
+            localStorage.setItem('numStudents', numStudents);
+            localStorage.setItem('maxId', ++maxId);
+            loadPage();
+          }else{
+            alert("增添失败");
+          }
+        },
+        error: function(err) {
+          alert("添加学生失败");
+          console.log("请求失败，错误信息：");
+          console.log(err);
+        },
+      })
+
+      $.ajax({
+        async: true,
+        url: 'http://127.0.0.1:8888/getTestList',
+        type:'GET',
+        contentType:'application/json',
+        headers: {
+          "Token": token
+        },
+        timeout:3000,
+        success:function(res) {
+          console.log(res);
+          addEmptyStudentScores(res, name, studentId);
+          
+        },
+        error: function(err) {
+          console.log("请求失败，错误信息：");
+          console.log(err);
+        },
+      });
+    }
+    else if (changeType == 'update') {
+      let student = data;
+      $.ajax({
+        async: true,
+        url: 'http://127.0.0.1:8888/updateStudent',
+        type:'POST',
+        contentType:'application/json',
+        data: JSON.stringify(student),
+        headers: {
+          "Token": token
+        },
+        // dataType: 'json',
+        timeout:3000,
+        success:function(res) {
+          console.log(res);
+          if (Number(res) > 0) {
+            alert("修改成功");
+            loadPage();
+          }else{
+            alert("修改失败");
+          }
+        },
+        error: function(err) {
+          alert("名字修改成功");
+        },
+      })
+      $.ajax({
+        async: true,
+        url: 'http://127.0.0.1:8888/editNameInGrade',
+        type:'POST',
+        contentType:'application/json',
+        data: JSON.stringify(student),
+        headers: {
+          "Token": token
+        },
+        // dataType: 'json',
+        timeout:3000,
+        success:function(res) {
+          console.log(res);
+        },
+        error: function(err) {
+          alert("成绩名称修改失败");
+        },
+      })
+    }
+    
+  }
+
+  function addEmptyStudentScores(res, name, studentId) {
+  let token = localStorage.getItem('token');
+  //let tests = res.data;
+  tests = JSON.parse(res).data;
+
+  if (Array.isArray(tests) && tests.length > 0) {
+    
+    for (test of tests) {
+      // Convert "null" string to null for the name field
+      const testName = test.name === "null" ? null : test.name;
+
+      data = {
+        name: name,
+        studentId: studentId,
+        semester: test.semester,
+        course: test.course,
+        testDate: test.testDate
+      };
+
+      $.ajax({
+        async: true,
+        url: 'http://127.0.0.1:8888/insertGrade',
+        type: 'POST',
+        contentType: 'application/json',
+        headers: {
+          "Token": token
+        },
+        data: JSON.stringify(data),
+        timeout: 3000,
+        success: function (res) {
+          console.log(res);
+          if (Number(res) > 0) {
+            // Do something if the AJAX call is successful
+          } else {
+            alert("增添失败");
+          }
+        },
+        error: function (err) {
+          alert("添加学生失败");
+          console.log("请求失败，错误信息：");
+          console.log(err);
+        },
+      });
+    }
+  } else {
+    console.log("No tests to iterate through.");
+  }
+}
+
+
+
+  function loadPage() {
+
+    let token = localStorage.getItem('token');
+
+    layui.use('table', function(){
+      var table = layui.table;
+
+      table.render({
+        elem: '#studentInfoTable',
+        url: 'http://127.0.0.1:8888/getStudentList',
+        method: 'GET',
+        cellMinWidth: 20,
+        headers: {
+          "Token": token
+        },
+        cols: [
+          [
+            { field: 'name', width: 80, title: '姓名' },
+            { field: 'age', width: 80, title: '年龄' },
+            { field: 'studentId', width: 80, title: '学号' },
+            { field: 'gender', width: 80, title: '性别' },
+            { field: 'birthdate', title: '生日' },
+            { field: 'phoneNumber', title: '手机号码' },
+            { field: 'politicalStatus', title: '政治面貌' },
+            { field: 'ethnicGroup', title: '名族' },
+            {fixed: 'right', title:'操作', toolbar: '#barDemo', width:150}
+          ],
+        ]
+      });
+    });
+  }
+  </script>
+</body>
+</html>
