@@ -1,0 +1,14 @@
+server:
+  port: 8888
+spring:
+  datasource:
+    username: root
+    password: 20031102
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/studentinfo_management?useUnicode=yes&characterEncoding=UTF-8&useLegacyDatetimeCode=false&serverTimezone=Asia/Shanghai&zeroDateTimeBehavior=convertToNull&useSSL=false&useOldAliasMetadataBehavior=true
+# config-location: #指定mybatis核心配置文件
+
+#Driver: MySQL Connector/J (ver. mysql-connector-java-8.0.25 (Revision: 08be9e9b4cba6aa115f9b27b215887af40b159e0), JDBC4.2)
+
+#Ping: 12 ms
+#SSL: yes
